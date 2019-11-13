@@ -1,3 +1,26 @@
+/* 
+MIT License
+
+Copyright (c) 2019 fredgarr
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 #ifndef TRICLICK_H
 #define TRICLICK_H
 
@@ -6,42 +29,25 @@
 
 // Functional constants:
 //--------------------------------------------
-// 5 seconds before going to normal operation
-#define SETUP_TIMER 5000 
-
-// Number of calibrations:
-#define CAL_TIME 4
 
 // Maximum time window duration authorized for the N clicks (in ms)
 // Time margin 50ms
 // FIXME: Some *2 clock error requiering to divide timer by 2...
 //        should be 3000 to get 3 seconds
 #define CLICKS_DURATION 3000
-#define TIME_MARGIN  150
 
 // Max number of cliks authorised per time window
 #define NUMBER_OF_CLICKS 3
-#define NUMBER_OF_TRANSITIONS     (NUMBER_OF_CLICKS*2)
 
 // Debounce timer expire return
 #define EXPIRED_TIMER 0xFFFFFFFF
-#define DISABLE_TIMER 0xFFFF
+
+ // the debounce time; 
+ // EndOfCourse switch bounce time measured to 1ms
+// Set to 5 ms for security
+#define DEBOUNCE_TIME 5          
 
 
-// Click definition:
-typedef struct click_T
-{
-    uint32_t minTime;
-    uint32_t maxTime;
-    uint16_t state; // High or Low
-}click_t;
-
-// Define the click table, as rising and follwing edges of button 
-//  Note that first index should always be [0, HIGH]
-typedef struct clickTable_T
-{
-    click_t elem[NUMBER_OF_TRANSITIONS];
-}clickTable_t;
 
 // Misc:
 //--------------------------------------------

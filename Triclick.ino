@@ -199,12 +199,15 @@ void loop() {
     // If ok, blink the led
     if(numberOfClick == NUMBER_OF_CLICKS)
     {    
-        numberOfClick --;
         if(CheckDeltaTime())
         {
             numberOfClick = 0;
             Serial.println(F("Command Detected"));
         }
+        else
+        {
+            numberOfClick --;
+        }  
     }
     
     // Increment table offset (loop to 0)

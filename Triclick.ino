@@ -27,8 +27,10 @@ by Arturo Guadalupi   modified 8 Sep 2016   by Colby Newman
 This code is in the public domain.
 
 */
+#define TESTING
 
 #include "Triclick.h"
+#include "IR_siemens.h"
 
 // constants won't change. They're used here to set pin numbers:
 const uint16_t buttonPin = 2;    // the number of the pushbutton pin
@@ -46,8 +48,86 @@ uint32_t lastDebounceTime = 0;  // the last time the output pin was toggled
 uint32_t timeClick_tbl[NUMBER_OF_CLICKS];
 uint16_t currentClickOffset = 0;
 uint16_t numberOfClick = 0;
+uint16_t logFlag = 0;
 
 
+// For testing purpose only, store all the clicks in FLASH memory
+// Maximum data is 512 clicks (leading to 2048 bytes)
+#ifdef TESTING
+    #include <EEPROM.h>
+    uint16_t dataToSaveOffset = 4;
+
+    void writeEEPROM(uint8_t type, uint32_t time)
+    {
+        // Save current value pointer
+        EEPROM.write(0, (uint8_t)(dataToSaveOffset & 0xFF));
+        EEPROM.write(1, (uint8_t)((dataToSaveOffset >> 8) & 0xFF));
+
+        // Save Type the 24 bits of time, little Endian
+        EEPROM.write(dataToSaveOffset++, type);
+        EEPROM.write(dataToSaveOffset++, (uint8_t)((time >> 8)& 0xFF));
+        EEPROM.write(dataToSaveOffset++, (uint8_t)((time >> 16)& 0xFF));
+        EEPROM.write(dataToSaveOffset++, (uint8_t)((time >> 24)& 0xFF));
+        if(dataToSaveOffset == EEPROM.length())
+        {
+            dataToSaveOffset = EEPROM.length()-4;
+        }
+    }
+
+    void readTestingTable()
+    {
+        char message[128];
+        uint16_t dataToSaveOffset;
+        uint8_t  flag;
+        uint32_t timer;
+
+        memset(message, 0, 128);
+        snprintf(message, 127, "EEPROM Len: %d", EEPROM.length());
+        Serial.println(message);
+
+        // Get save pointer :
+        dataToSaveOffset = (uint16_t)EEPROM.read(0);
+        dataToSaveOffset += ((uint16_t)EEPROM.read(1))<<8;
+
+        for(uint16_t k=4; k<=(dataToSaveOffset); k+=4)
+        {
+
+            memset(message, 0, 64);
+            flag = EEPROM.read(k);
+            timer = ((uint32_t)(EEPROM.read(k+1)))<<8;
+            timer += ((uint32_t)(EEPROM.read(k+2)))<<16;
+            timer += ((uint32_t)(EEPROM.read(k+3)))<<24;
+            snprintf(message, 63, "offset %d : [%d, %ld]", k/4, flag, timer);
+            Serial.println(message);
+        }
+    }
+
+
+    void logClick(uint8_t type, uint32_t time)
+    {
+            writeEEPROM(type, time);
+    }
+#else
+    void logClick(uint8_t type, uint32_t time){}
+#endif
+
+// blinkLed: 
+// BLinks the led for a given number of time.
+// @param[in]  times : Number of blink 
+// @param[out] None
+void blinkLed(int times) {
+
+    uint16_t k;
+    for(k=0; k<times; k++)
+    {
+        analogWrite(ledPin, 255);
+        delay(50);
+        analogWrite(ledPin, 0);
+        delay(50);
+    }
+    // Power off the LED at the end:
+    analogWrite(ledPin, 0);
+}
 
 // debounce: 
 // Returns a time value when a stabilized contactor
@@ -136,6 +216,9 @@ void setup() {
     pinMode(buttonPin, INPUT);
     pinMode(ledPin, OUTPUT);
 
+    // Configure IR output port & PWM
+    IR_configure();
+
     // set initial LED state
     digitalWrite(ledPin, LOW);
 
@@ -144,6 +227,35 @@ void setup() {
     {
         timeClick_tbl[k] = EXPIRED_TIMER;
     }
+
+#ifdef TESTING
+    {
+        uint32_t endTime = millis() + SETUP_TIMER; // Wait for 10 seconds
+        uint16_t keyPressed = False;
+        Serial.println(F("Wait 10sec before printing logged data..."));
+
+        // Loop for 'SETUP_TIMER' max milliseconds
+        while((endTime > millis())&&(keyPressed == False))
+        {
+            if(Serial.available() > 0)
+            {
+                char c = Serial.read();
+                keyPressed = True;
+                Serial.println(F("\nSkipping display data"));
+            }
+            else
+            {
+                Serial.print('.');
+            }
+            delay(200);
+        }    
+        if(keyPressed == True)
+        {
+            readTestingTable();
+        }
+
+    }
+#endif
 
     Serial.println(F("Init done, entering normal mode"));
 
@@ -179,22 +291,22 @@ uint16_t CheckDeltaTime()
         result = true;
     }
 
-    // printClick(currentClickOffset);
     return result;
 }
 
-// Wait for first transition 0->1
-//      Record Timer 
-// 
+
 
 void loop() {
 
     // Wait for a rising edge (button pressed)
     // and store timer when rising edge occurs.
     timeClick_tbl[currentClickOffset] = debounce();
+    // Wait for the button to be released 
+    waitButtonReleased();
 
     numberOfClick++;
-
+    blinkLed(1);
+    
     // Calculate the delta between timer 
     // If ok, blink the led
     if(numberOfClick == NUMBER_OF_CLICKS)
@@ -202,13 +314,22 @@ void loop() {
         if(CheckDeltaTime())
         {
             numberOfClick = 0;
-            Serial.println(F("Command Detected"));
+            logFlag = 1;
+            // Send Nurse Call code twice
+            IR_sendCode(0x02, BUTTON1, SHORT_PULSE);
+            blinkLed(5);
+            delay(100);
+            IR_sendCode(0x02, BUTTON1, SHORT_PULSE);
+            blinkLed(5);
         }
         else
         {
             numberOfClick --;
         }  
     }
+
+    logClick(logFlag, timeClick_tbl[currentClickOffset]);
+    logFlag = 0;
     
     // Increment table offset (loop to 0)
     if(currentClickOffset == NUMBER_OF_CLICKS-1)
@@ -219,8 +340,4 @@ void loop() {
     {
         currentClickOffset ++;
     }
-
-    // Wait for the button to be released 
-    waitButtonReleased();
-
 }

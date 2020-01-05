@@ -42,12 +42,15 @@ SOFTWARE.
 // Debounce timer expire return
 #define EXPIRED_TIMER 0xFFFFFFFF
 
- // the debounce time; 
- // EndOfCourse switch bounce time measured to 1ms
-// Set to 5 ms for security
-#define DEBOUNCE_TIME 5          
+// the debounce time; 
+// EndOfCourse switch bounce time measured to 1ms
+// Set to 10 ms for security
+#define DEBOUNCE_TIME 10          
 
-
+// Persistant click save for testing only
+#define MAX_SAVE_SIZE 512
+// 5 seconds before going to normal operation
+#define SETUP_TIMER 10000
 
 // Misc:
 //--------------------------------------------

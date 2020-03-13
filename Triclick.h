@@ -34,7 +34,7 @@ SOFTWARE.
 // Time margin 50ms
 // FIXME: Some *2 clock error requiering to divide timer by 2...
 //        should be 3000 to get 3 seconds
-#define CLICKS_DURATION 3000
+#define CLICKS_DURATION 5000
 
 // Max number of cliks authorised per time window
 #define NUMBER_OF_CLICKS 3

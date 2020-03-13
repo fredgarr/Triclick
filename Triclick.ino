@@ -34,7 +34,8 @@ This code is in the public domain.
 
 // constants won't change. They're used here to set pin numbers:
 const uint16_t buttonPin = 2;    // the number of the pushbutton pin
-const uint16_t ledPin = PIN_A3;    //13  // the number of the LED pin
+const uint16_t ledPin = PIN_A3;  // 13 - the number of the LED pin
+const uint16_t relayPin = 8;     // Mechanical 5V relayPin
 
 // Variables will change:
 uint16_t buttonState = LOW;       // the current reading from the input pin
@@ -231,12 +232,16 @@ void setup() {
     // Init pin in/out
     pinMode(buttonPin, INPUT);
     pinMode(ledPin, OUTPUT);
+    pinMode(relayPin,OUTPUT);
 
     // Configure IR output port & PWM
     IR_configure();
 
     // set initial LED state
     digitalWrite(ledPin, LOW);
+
+    // set initial Relay pin state
+    digitalWrite(relayPin, LOW);
 
     // Reset delta time table:
     for (k=0; k<NUMBER_OF_CLICKS; k++)
@@ -325,6 +330,29 @@ uint16_t CheckDeltaTime()
 }
 
 
+void send_IR_cmd()
+{
+    // Secure the call: 
+    // sed on the Two buttons short and long commands for CODE 0x02
+    // Repeate 3 times (~ 10 sec)
+    for(uint16_t k=0; k<3; k++)
+    {
+        IR_sendCode(0x02, BUTTON1, SHORT_PULSE);
+        blinkLed(5);
+        delay(100);
+        IR_sendCode(0x02, BUTTON1, LONG_PULSE);
+        blinkLed(5);
+        delay(100);
+        IR_sendCode(0x02, BUTTON2, SHORT_PULSE);
+        blinkLed(5);
+        delay(100);
+        IR_sendCode(0x02, BUTTON2, LONG_PULSE);
+        blinkLed(5);
+        delay(100);
+    }
+
+}
+
 
 void loop() {
 
@@ -345,12 +373,11 @@ void loop() {
         {
             numberOfClick = 0;
             logFlag = 1;
-            // Send Nurse Call code twice
-            IR_sendCode(0x02, BUTTON1, SHORT_PULSE);
-            blinkLed(5);
-            delay(100);
-            IR_sendCode(0x02, BUTTON1, SHORT_PULSE);
-            blinkLed(5);
+
+            // Double command between relay and IR :
+            digitalWrite(relayPin, HIGH);
+            send_IR_cmd();
+            digitalWrite(relayPin, LOW);
         }
         else
         {

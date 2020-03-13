@@ -63,7 +63,7 @@ uint16_t logFlag = 0;
         EEPROM.write(0, (uint8_t)(dataToSaveOffset & 0xFF));
         EEPROM.write(1, (uint8_t)((dataToSaveOffset >> 8) & 0xFF));
 
-        // Save Type the 24 bits of time, little Endian
+        // Save Type and 24 MS-bits of time, little Endian
         EEPROM.write(dataToSaveOffset++, type);
         EEPROM.write(dataToSaveOffset++, (uint8_t)((time >> 8)& 0xFF));
         EEPROM.write(dataToSaveOffset++, (uint8_t)((time >> 16)& 0xFF));
@@ -73,6 +73,26 @@ uint16_t logFlag = 0;
             dataToSaveOffset = EEPROM.length()-4;
         }
     }
+
+
+    void resetEEPROMptr()
+    {
+        dataToSaveOffset = 4;
+        // Save current value pointer
+        EEPROM.write(0, (uint8_t)(dataToSaveOffset & 0xFF));
+        EEPROM.write(1, (uint8_t)((dataToSaveOffset >> 8) & 0xFF));
+
+    }
+
+    uint16_t readEEPROM(uint16_t offset)
+    {
+        uint16_t data;
+
+        data = (uint16_t)EEPROM.read(offset);
+        data += ((uint16_t)EEPROM.read(offset+1))<<8;
+        return data;
+    }
+
 
     void readTestingTable()
     {
@@ -86,8 +106,7 @@ uint16_t logFlag = 0;
         Serial.println(message);
 
         // Get save pointer :
-        dataToSaveOffset = (uint16_t)EEPROM.read(0);
-        dataToSaveOffset += ((uint16_t)EEPROM.read(1))<<8;
+        dataToSaveOffset = readEEPROM(0);
 
         for(uint16_t k=4; k<=(dataToSaveOffset); k+=4)
         {
@@ -209,9 +228,6 @@ void waitButtonReleased()
 void setup() {
     uint16_t k;
 
-    // init serial Port for debugging
-    Serial.begin(115200);
-
     // Init pin in/out
     pinMode(buttonPin, INPUT);
     pinMode(ledPin, OUTPUT);
@@ -228,8 +244,13 @@ void setup() {
         timeClick_tbl[k] = EXPIRED_TIMER;
     }
 
+    blinkLed(10);
+
 #ifdef TESTING
     {
+        // init serial Port for debugging
+        Serial.begin(115200);
+
         uint32_t endTime = millis() + SETUP_TIMER; // Wait for 10 seconds
         uint16_t keyPressed = False;
         Serial.println(F("Wait 10sec before printing logged data..."));
@@ -241,7 +262,7 @@ void setup() {
             {
                 char c = Serial.read();
                 keyPressed = True;
-                Serial.println(F("\nSkipping display data"));
+                Serial.println(F("Display data and reset EEPROM"));
             }
             else
             {
@@ -252,6 +273,15 @@ void setup() {
         if(keyPressed == True)
         {
             readTestingTable();
+            resetEEPROMptr();
+
+        }
+        else
+        {
+            Serial.println(F("Do not reset EEPROM pointer"));
+            dataToSaveOffset = readEEPROM(0);
+            // Mark New cession
+            writeEEPROM(0xFA, 0x00FAFAFA);
         }
 
     }

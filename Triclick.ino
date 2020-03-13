@@ -27,7 +27,7 @@ by Arturo Guadalupi   modified 8 Sep 2016   by Colby Newman
 This code is in the public domain.
 
 */
-#define TESTING
+//#define TESTING
 
 #include "Triclick.h"
 #include "IR_siemens.h"
